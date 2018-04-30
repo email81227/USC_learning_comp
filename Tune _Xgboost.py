@@ -34,7 +34,7 @@ y_tr = lb.fit_transform(y_tr)
 
 
 def xgboost_param_selection(param_grid, Xtr, ytr, Xts, sample_weight=None, nfolds=5):
-    model = XGBClassifier(learning_rate=0.1, n_estimators=140, max_depth=5, eta=2, silent=1,
+    model = XGBClassifier(learning_rate=0.1, n_estimators=20, max_depth=5, eta=2, silent=1,
                           min_child_weight=1, gamma=0, subsample=0.8, colsample_bytree=0.8,
                           objective='multi:softprob', nthread=4, scale_pos_weight=1, num_class=10)
     gr_search = GridSearchCV(model, param_grid, cv=nfolds, n_jobs=1, iid=False)
