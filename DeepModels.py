@@ -63,7 +63,7 @@ def cnn1D(X_tr, y_tr):
     model.add(Dense(y_tr.shape[1], activation='softmax', name='FD2'))
     # https://keras.io/losses/
     # https://keras.io/optimizers/
-    # model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
+    model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
     # No progress bar displayed: verbose=0
     # model.fit(X_tr, y_tr, batch_size=200, epochs=50, validation_split=0.1, verbose=0)
 
@@ -89,7 +89,7 @@ def cnn2D(X_tr, y_tr):
 
     model.add(Dense(y_tr.shape[1], activation='softmax'))
 
-    # model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
+    model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
     # model.fit(X_tr, y_tr, batch_size=batch_size, epochs=epochs, verbose=0, validation_split=0.1)
     # model.train_on_batch(X_tr, y_tr)
     # model.fit(X_tr, y_tr, batch_size=200, epochs=50, validation_split=0.1, verbose=0)

@@ -4,6 +4,7 @@ import pandas as pd
 import pdb
 
 from DeepModels import *
+from DeepModel_stacking import *
 from keras.utils import np_utils
 
 from os.path import join
@@ -54,8 +55,14 @@ cnn.fit(X_tr, y_tr, batch_size=b_size, epochs=epochs, validation_split=vaalid, v
 # model.fit(X_tr, y_tr, batch_size=200, epochs=50, validation_split=0.1, verbose=0)
 
 # pdb.set_trace()
-prediction = cnn.predict(X_ts)
+# prediction = cnn.predict(X_ts)
 
+# Stocked LSTM
+stackedLSTM = stacked_LSTM(X_tr, y_tr)
+
+stackedLSTM.fit(X_tr, y_tr, batch_size=200, epochs=50, validation_split=0.1, verbose=0)
+
+prediction = stackedLSTM.predict(X_ts)
 # classes = prediction.argmax(axis=-1)
 # test['Prediction_Class'] = list(lb.inverse_transform(classes))
 
@@ -64,4 +71,4 @@ prediction = cnn.predict(X_ts)
 
 classes = prediction[:len(test)].argmax(axis=-1)
 test['Class'] = list(lb.inverse_transform(classes))
-test.to_csv(join(r'D:\DataSet\UrbanSoundChallenge\submission', 'sub_CNN_2D_1.csv'), index=False)
+test.to_csv(join(r'D:\DataSet\UrbanSoundChallenge\submission', 'sub_stacled_LSTM.csv'), index=False)
