@@ -3,9 +3,10 @@ from multiprocessing import Pool
 import numpy as np
 
 
-SAMPLE_RATE = 22500
+SAMPLE_RATE = 200
 LENGTH = 7
 MAX_LEN = SAMPLE_RATE * LENGTH
+N_JOBS = 15
 
 
 def padding(obj, max_len=MAX_LEN):
@@ -15,18 +16,19 @@ def padding(obj, max_len=MAX_LEN):
     :param max_len: (Int)
     :return: Array 1 dimension
     '''
-    if obj.shape[0] < max_len:
+    if obj.sample.shape[0] < max_len:
         src = np.zeros(max_len)
-        src[:obj.shape[0]] = obj
+        src[:obj.sample.shape[0]] = obj.sample
     else:
-        src = obj[:max_len]
+        src = obj.sample[:max_len]
 
-    return src
+    obj.sample = src
+    return obj
 
 
 def preprocess(objs):
     # Initial pool
-    pool = Pool()
+    pool = Pool(N_JOBS)
 
     #
     objs = pool.map(padding, objs)

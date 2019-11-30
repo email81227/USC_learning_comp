@@ -30,8 +30,7 @@ def apply_mfcc_to_sources(objs):
 
 
 def features_engineering(objs):
-
-    return
+    return apply_mfcc_to_sources(objs)
 
 
 def get_mfcc(src):

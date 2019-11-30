@@ -19,6 +19,8 @@ def main():
 
     # Training
 
+    return objs
+
 
 if __name__ == '__main__':
-    main()
+    objs = main()
