@@ -1,14 +1,11 @@
 import pandas as pd
-import pdb
-import xgboost as xgb
 
-from sklearn import cross_validation, metrics   #Additional scklearn functions
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import GridSearchCV   #Perforing grid search
 from xgboost.sklearn import XGBClassifier
 
 # Customized functions
-from PublicFunctions import *
+from Code.src.dropped.PublicFunctions import *
 
 
 train_path = r'D:\DataSet\UrbanSoundChallenge\train'

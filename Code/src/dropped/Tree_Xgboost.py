@@ -1,12 +1,11 @@
 import pandas as pd
-import pdb
 import xgboost as xgb
 
 from sklearn.preprocessing import LabelEncoder
 from xgboost.sklearn import XGBClassifier
 
 # Customized functions
-from PublicFunctions import *
+from Code.src.dropped.PublicFunctions import *
 
 
 train_path = r'D:\DataSet\UrbanSoundChallenge\train'

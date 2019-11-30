@@ -1,17 +1,12 @@
-import numpy as np
-import os
 import pandas as pd
-import pdb
 
-from DeepModels import *
+from Code.src.dropped.DeepModels import *
 from keras.utils import np_utils
 
-from os.path import join
-from sklearn import metrics
 from sklearn.preprocessing import LabelEncoder
 
 # Customized functions
-from PublicFunctions import *
+from Code.src.dropped.PublicFunctions import *
 
 train_path = r'D:\DataSet\UrbanSoundChallenge\train'
 test_path = r'D:\DataSet\UrbanSoundChallenge\test'
