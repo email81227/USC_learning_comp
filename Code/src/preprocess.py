@@ -60,6 +60,11 @@ def get_mfcc(src):
 
 
 if __name__ == '__main__':
+    '''
+    Sorting out the raw data into preprocessed
+    
+    (raw (wav) data == [preprocess.py] ==> preprocessed)
+    '''
     from Code.src.utils import get_test_data, get_training_data
 
     import os
