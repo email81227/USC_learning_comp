@@ -1,4 +1,3 @@
-import librosa
 import os
 import pandas as pd
 
@@ -10,12 +9,12 @@ class RawSample:
     def __init__(self, id, label, data_path):
         self.id = id
         self.label = label
-        self.sample = None
+        # self.sample = None
         self.sample_path = data_path
-        self.sample_rate = None
-
-    def load_sample(self, **kwargs):
-        self.sample, self.sample_rate = librosa.load(self.sample_path, **kwargs)
+        # self.sample_rate = None
+    #
+    # def load_sample(self, **kwargs):
+    #     self.sample, self.sample_rate = librosa.load(self.sample_path, **kwargs)
 
 
 class Features:
@@ -40,7 +39,7 @@ def get_test_data():
 
     samples = []
     for i, row in tr.iterrows():
-        samples.append(RawSample(row.ID, None, os.path.join(TR_DIR, 'Test', str(row.ID) + '.wav')))
+        samples.append(RawSample(row.ID, None, os.path.join(TS_DIR, 'Test', str(row.ID) + '.wav')))
 
     return samples
 
