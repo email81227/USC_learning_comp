@@ -35,7 +35,7 @@ def model_saver(model, path=r'.'):
 
 # For images
 def parser(row, num_mfcc=128):
-    # function to load files and extract features
+    # function to load files and extract Modeling
     if hasattr(row, 'Class'):
         file_name = join(data_path, str(row.ID) + '.png')
     else:
@@ -60,7 +60,7 @@ def datagenerater(df, batch_size=4, mod='train'):
     batch_labels = np.zeros((batch_size, 10))
     while True:
         for i in range(batch_size):
-            # choose random index in features
+            # choose random index in Modeling
             index = random.choice(len(df), 1)
 
             temp = df.iloc[index].apply(parser, axis=1)

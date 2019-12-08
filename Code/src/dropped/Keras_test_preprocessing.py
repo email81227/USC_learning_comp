@@ -17,9 +17,9 @@ sub_path = r'D:\DataSet\UrbanSoundChallenge\submission'
 doc_path = r'D:\DataSet\UrbanSoundChallenge\train'
 
 num_mfcc = 256
-# Step 1 and  2 combined: Load audio files and extract features
+# Step 1 and  2 combined: Load audio files and extract Modeling
 def parser(row, num_mfcc=num_mfcc):
-    # function to load files and extract features
+    # function to load files and extract Modeling
     if hasattr(row, 'Class'):
         file_name = join(data_path, str(row.ID) + '.wav')
     else:
@@ -51,7 +51,7 @@ def parser(row, num_mfcc=num_mfcc):
 
 
 def transformation(row, num_mfcc=num_mfcc):
-    # function to load files and extract features
+    # function to load files and extract Modeling
     if hasattr(row, 'Class'):
         file_name = join(data_path, str(row.ID) + '.wav')
     else:

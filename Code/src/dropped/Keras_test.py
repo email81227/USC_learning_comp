@@ -55,7 +55,7 @@ from sklearn.preprocessing import LabelEncoder
 from keras.backend.tensorflow_backend import set_session
 
 
-# Step 1 and  2 combined: Load audio files and extract features (done in *_preprocessing)
+# Step 1 and  2 combined: Load audio files and extract Modeling (done in *_preprocessing)
 def loader(path, name, dtype='float'):
     with open(join(path, name), 'r') as f:
         data_array = np.loadtxt(f, dtype=dtype)
