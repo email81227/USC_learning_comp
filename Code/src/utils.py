@@ -9,12 +9,9 @@ class RawSample:
     def __init__(self, id, label, data_path):
         self.id = id
         self.label = label
-        # self.sample = None
+        self.sample = None
         self.sample_path = data_path
-        # self.sample_rate = None
-    #
-    # def load_sample(self, **kwargs):
-    #     self.sample, self.sample_rate = librosa.load(self.sample_path, **kwargs)
+        self.sample_rate = None
 
 
 class Features:

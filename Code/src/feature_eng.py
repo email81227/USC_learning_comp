@@ -1,10 +1,46 @@
+from Code.src.utils import Features
+from multiprocessing import Pool
 from sklearn.preprocessing import LabelEncoder
 # from sklearn.model_selection import train_test_split
-import numpy as np
+
 import os
 import pickle
+import librosa
+import numpy as np
+import time
 
+
+SAMPLE_RATE = 200
+LENGTH = 7
+MAX_LEN = SAMPLE_RATE * LENGTH
 N_JOBS = 15
+
+
+def get_mfcc(obj):
+    mfcc = librosa.feature.mfcc(obj.sample, obj.sample_rate, n_mfcc=20)
+    dmfcc = mfcc[:, 1:] - mfcc[:, :-1]
+    ddmfcc = dmfcc[:, 1:] - dmfcc[:, :-1]
+    return np.concatenate((np.mean(mfcc, axis=1), np.std(mfcc, axis=1),
+                           np.mean(dmfcc, axis=1), np.std(dmfcc, axis=1),
+                           np.mean(ddmfcc, axis=1), np.std(ddmfcc, axis=1)), axis=0)
+
+
+def mfcc_extraction(objs):
+    # Initial pool
+    pool = Pool(N_JOBS)
+
+    # Map mfcc to every object
+    start = time.time()
+    feats = pool.map(get_mfcc, objs)
+    print('MFCC is done! in {:6.4f} sec'.format(time.time() - start))
+
+    pool.close()
+    pool.join()
+    #
+    # feats = np.array(feats)
+
+    # return [Features(obj.id, feat, obj.label) for obj, feat in zip(objs, feats)]
+    return feats
 
 
 # for mfcc
@@ -13,11 +49,14 @@ def features_engineering(objs, training=True):
     sample_id = [obj.id for obj in objs]
 
     # Feature generated
-    X = [obj.ft for obj in objs]
-    X = np.array(X)
-    #
+    # X = [obj.ft for obj in objs]
+    # X = np.array(X)
+    mfcc = mfcc_extraction(objs)
 
     #
+
+    # Merge the features
+
 
     # Label encoding
     if training:
