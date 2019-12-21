@@ -1,19 +1,76 @@
+from Code.src.auto_encoders import AutoEncoder
+from Code.src.preprocess import SAMPLE_RATE, LENGTH
 from Code.src.utils import Features
 from multiprocessing import Pool
 from sklearn.preprocessing import LabelEncoder
-# from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split
 
 import os
 import pickle
 import librosa
 import numpy as np
+import tensorflow as tf
 import time
 
 
-SAMPLE_RATE = 200
-LENGTH = 7
+LATENT_DIM = 32
 MAX_LEN = SAMPLE_RATE * LENGTH
 N_JOBS = 15
+
+
+# for mfcc
+def features_engineering(objs, training=True):
+    # Get id
+    sample_id = [obj.id for obj in objs]
+
+    # MFCC feature generated
+    mfcc_feats = mfcc_extraction(objs)
+
+    # AutoEncoder
+    ae_feats = feature_extraction_by_autoencoder(objs)
+
+    # Label encoding
+    if training:
+        y = label_encoding(objs, training)
+        y = np.array(y)
+
+    # Merge the features
+    features = []
+    for mfcc, ae, obj, lbl in zip(mfcc_feats, ae_feats, objs, y):
+        features.append(Features(obj.id,
+                                 {'mfcc': mfcc,
+                                  'autoencode': ae},
+                                 lbl if training else None))
+    return features
+
+
+def feature_extraction_by_autoencoder(objs):
+    tr_X, ts_X = train_test_split(objs, test_size=.2, random_state=42, stratify=[obj.label for obj in objs])
+
+    tr_X = [obj.sample for obj in tr_X]
+    ts_X = [obj.sample for obj in ts_X]
+
+    tr_X = tf.convert_to_tensor(tr_X)
+    ts_X = tf.convert_to_tensor(ts_X)
+
+    ae = AutoEncoder(LATENT_DIM, MAX_LEN)
+    ae.compile(optimizer=tf.keras.optimizers.Adadelta(1.0, .95),
+               loss=tf.keras.losses.BinaryCrossentropy())
+    ae.fit(tr_X, tr_X,
+           epochs=10,
+           batch_size=32,
+           shuffle=True,
+           validation_data=(ts_X, ts_X))
+
+    ae.save(r'Model/formal/dnn_autoencoder.h5')
+
+    del tr_X, ts_X
+
+    tmp = [obj.sample for obj in objs]
+    tmp = tf.convert_to_tensor(tmp)
+    tmp = ae.encode(tmp)
+
+    return tmp
 
 
 def get_mfcc(obj):
@@ -41,31 +98,6 @@ def mfcc_extraction(objs):
 
     # return [Features(obj.id, feat, obj.label) for obj, feat in zip(objs, feats)]
     return feats
-
-
-# for mfcc
-def features_engineering(objs, training=True):
-    # Get id
-    sample_id = [obj.id for obj in objs]
-
-    # Feature generated
-    # X = [obj.ft for obj in objs]
-    # X = np.array(X)
-    mfcc = mfcc_extraction(objs)
-
-    #
-
-    # Merge the features
-
-
-    # Label encoding
-    if training:
-        y = label_encoding(objs, training)
-        y = np.array(y)
-
-        return sample_id, X, y
-    else:
-        return sample_id, X, None
 
 
 def label_encoding(objs, training=True):
