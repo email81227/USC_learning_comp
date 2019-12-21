@@ -8,7 +8,7 @@ import time
 LATENT_SHAPE = 32
 
 
-# TODO: Check why performance differnet between Keras + tensorflow and tf.keras
+# Performance different between Keras + tensorflow and tf.keras
 # >>> The optimizer Ada-delta has different default learning rate which is 1e-3 and 1.0 respectively
 class AutoEncoder(tf.keras.Model):
     def __init__(self, latent_dim, original_size):
