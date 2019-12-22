@@ -1,6 +1,8 @@
 from Code.src.auto_encoders import AutoEncoder
 from Code.src.preprocess import SAMPLE_RATE, LENGTH
 from Code.src.utils import Features
+from collections import defaultdict
+from matplotlib import pyplot as plt
 from multiprocessing import Pool
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
@@ -20,27 +22,27 @@ N_JOBS = 15
 
 # for mfcc
 def features_engineering(objs, training=True):
-    # Get id
-    sample_id = [obj.id for obj in objs]
+    # Label encoding
+    if training:
+        ys = label_encoding(objs, training)
+        ys = np.array(ys)
 
-    # MFCC feature generated
-    mfcc_feats = mfcc_extraction(objs)
+    # List of feature objects
+    features = []
+    for obj, y in zip(objs, ys):
+        features.append(Features(obj.id, {}, y if training else None))
+
+    # Feature extracted by multiprocess
+    feats = distributed_extraction(objs)
 
     # AutoEncoder
     ae_feats = feature_extraction_by_autoencoder(objs)
 
-    # Label encoding
-    if training:
-        y = label_encoding(objs, training)
-        y = np.array(y)
+    # Feature merge
+    for ae_feat, obj in features:
+        obj.ft['AE'] = ae_feat
+        obj.ft.update(feats[obj.id])
 
-    # Merge the features
-    features = []
-    for mfcc, ae, obj, lbl in zip(mfcc_feats, ae_feats, objs, y):
-        features.append(Features(obj.id,
-                                 {'mfcc': mfcc,
-                                  'autoencode': ae},
-                                 lbl if training else None))
     return features
 
 
@@ -82,24 +84,6 @@ def get_mfcc(obj):
                            np.mean(ddmfcc, axis=1), np.std(ddmfcc, axis=1)), axis=0)
 
 
-def mfcc_extraction(objs):
-    # Initial pool
-    pool = Pool(N_JOBS)
-
-    # Map mfcc to every object
-    start = time.time()
-    feats = pool.map(get_mfcc, objs)
-    print('MFCC is done! in {:6.4f} sec'.format(time.time() - start))
-
-    pool.close()
-    pool.join()
-    #
-    # feats = np.array(feats)
-
-    # return [Features(obj.id, feat, obj.label) for obj, feat in zip(objs, feats)]
-    return feats
-
-
 def label_encoding(objs, training=True):
     labels = [obj.label for obj in objs]
 
@@ -112,6 +96,47 @@ def label_encoding(objs, training=True):
         lbl = pickle.load(open(os.path.join(r'Encoders/label', 'label_encoder.pkl'), 'rb'))
 
     return lbl.transform(labels)
+
+
+def distributed_extraction(objs):
+    # Initial pool
+    pool = Pool(N_JOBS)
+
+    # Map mfcc to every object
+    start = time.time()
+    mfcc_feats = pool.map(get_mfcc, objs)
+    print('MFCC is done! in {:6.4f} sec'.format(time.time() - start))
+
+    mel_spec_feats = pool.map(plot_melspectrogram, objs)
+    print('MelSpectogram ploting is done! in {:6.4f} sec'.format(time.time() - start))
+
+    pool.close()
+    pool.join()
+    #
+    feats = defaultdict(dict)
+
+    for mfcc, mel_spec, obj in zip(mfcc_feats, mel_spec_feats, objs):
+        feats[obj.id].update({'MFCC': mfcc,
+                              'Mel_Spectogram': mel_spec})
+
+    return feats
+
+
+def plot_melspectrogram(obj):
+    mel_spec = librosa.feature.melspectrogram(y=obj.sample, sr=obj.sample_rate, n_mels=128, fmax=8000)
+    mel_spec = librosa.power_to_db(mel_spec, ref=np.max)
+
+    fig_name = str(obj.id) + '.png'
+    fig_dir = os.path.join(r'Data/Modeling/melspectograms', fig_name)
+
+    plt.figure(figsize=(10, 5))
+
+    librosa.display.specshow(mel_spec, sr=obj.sample_rate, x_axis=None, y_axis=None)
+
+    plt.tight_layout()
+    plt.savefig(fig_dir, dpi=200)
+
+    return fig_dir
 
 
 if __name__ == '__main__':
