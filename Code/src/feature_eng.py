@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split
 import os
 import pickle
 import librosa
+import librosa.display
 import numpy as np
 import tensorflow as tf
 import time
@@ -27,46 +28,59 @@ def features_engineering(objs, training=True):
         ys = label_encoding(objs, training)
         ys = np.array(ys)
 
-    # List of feature objects
-    features = []
-    for obj, y in zip(objs, ys):
-        features.append(Features(obj.id, {}, y if training else None))
+        # List of feature objects
+        features = []
+        for obj, y in zip(objs, ys):
+            features.append(Features(obj.id, {}, y))
+    else:
+        features = []
+        for obj in objs:
+            features.append(Features(obj.id, {}, None))
 
     # Feature extracted by multiprocess
     feats = distributed_extraction(objs)
 
     # AutoEncoder
-    ae_feats = feature_extraction_by_autoencoder(objs)
+    ae_feats = feature_extraction_by_autoencoder(objs, training=training)
 
     # Feature merge
-    for ae_feat, obj in features:
+    for ae_feat, obj in zip(ae_feats, features):
         obj.ft['AE'] = ae_feat
         obj.ft.update(feats[obj.id])
 
     return features
 
 
-def feature_extraction_by_autoencoder(objs):
-    tr_X, ts_X = train_test_split(objs, test_size=.2, random_state=42, stratify=[obj.label for obj in objs])
+def feature_extraction_by_autoencoder(objs, training):
+    WEIGHT_DIR = r'Model/formal/dnn_autoencoder.h5'
+    if training:
+        tr_X, ts_X = train_test_split(objs, test_size=.2, random_state=42, stratify=[obj.label for obj in objs])
 
-    tr_X = [obj.sample for obj in tr_X]
-    ts_X = [obj.sample for obj in ts_X]
+        tr_X = [obj.sample for obj in tr_X]
+        ts_X = [obj.sample for obj in ts_X]
 
-    tr_X = tf.convert_to_tensor(tr_X)
-    ts_X = tf.convert_to_tensor(ts_X)
+        tr_X = tf.convert_to_tensor(tr_X)
+        ts_X = tf.convert_to_tensor(ts_X)
 
-    ae = AutoEncoder(LATENT_DIM, MAX_LEN)
-    ae.compile(optimizer=tf.keras.optimizers.Adadelta(1.0, .95),
-               loss=tf.keras.losses.BinaryCrossentropy())
-    ae.fit(tr_X, tr_X,
-           epochs=10,
-           batch_size=32,
-           shuffle=True,
-           validation_data=(ts_X, ts_X))
+        ae = AutoEncoder(LATENT_DIM, MAX_LEN)
+        ae.compile(optimizer=tf.keras.optimizers.Adadelta(1.0, .95),
+                   loss=tf.keras.losses.BinaryCrossentropy())
+        ae.fit(tr_X, tr_X,
+               epochs=50,
+               batch_size=32,
+               shuffle=True,
+               validation_data=(ts_X, ts_X))
 
-    ae.save(r'Model/formal/dnn_autoencoder.h5')
+        ae.save_weights(WEIGHT_DIR)
 
-    del tr_X, ts_X
+        del tr_X, ts_X
+
+    else:
+        ae = AutoEncoder(LATENT_DIM, MAX_LEN)
+        ae.compile(optimizer=tf.keras.optimizers.Adadelta(1.0, .95),
+                   loss = tf.keras.losses.BinaryCrossentropy())
+        ae.generative_net.build(input_shape=(1, LATENT_DIM))
+        ae.load_weights(WEIGHT_DIR)
 
     tmp = [obj.sample for obj in objs]
     tmp = tf.convert_to_tensor(tmp)
@@ -135,6 +149,7 @@ def plot_melspectrogram(obj):
 
     plt.tight_layout()
     plt.savefig(fig_dir, dpi=200)
+    plt.close()
 
     return fig_dir
 
