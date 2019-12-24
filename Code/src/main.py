@@ -3,6 +3,8 @@ import numpy as np
 np.random.seed(123)
 
 from Code.src.models import *
+from Code.src.preprocess import N_JOBS
+from multiprocessing import Pool
 from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoint
 from tensorflow.keras.models import load_model
 from tensorflow.keras.utils import to_categorical
@@ -11,28 +13,33 @@ import datetime
 import os
 import pandas as pd
 import pickle
+import time
 
 DATA_DIR = r'Data/Modeling'
 
 
-def training_config():
-    cfg = {'epochs': 30,
-           'batch_size': 256,
-           'validation_split': .2,
-           'validation_data': None,
-           'class_weight': None,
-           'sample_weight': None,
-           'callbacks': [early_stop(),
-                         # learning_rate_schedule(),
-                         model_keeper()
-                         ],
-           }
-
-    return cfg
+def concatenate(obj):
+    return np.concatenate((np.array(obj.ft['AE']), obj.ft['MFCC']), axis=0)
 
 
 def early_stop():
     return EarlyStopping(monitor='val_loss', patience=5, verbose=1)
+
+
+def feature_concatenate(objs):
+    # Initial pool
+    pool = Pool(N_JOBS)
+
+    # Map mfcc to every object
+    start = time.time()
+
+    tmp = pool.map(concatenate, objs)
+    print('Concatenate is done! in {:6.4f} sec'.format(time.time() - start))
+
+    pool.close()
+    pool.join()
+    #
+    return np.array(tmp)
 
 
 def learning_rate_schedule():
@@ -45,13 +52,16 @@ def model_keeper():
 
 def train():
     # Get data
-    sample_id, tr_X, tr_y = pickle.load(open(os.path.join(DATA_DIR, 'train.pkl'), 'rb'))
+    samples = pickle.load(open(os.path.join(DATA_DIR, 'train.pkl'), 'rb'))
 
     # One Hot encode label for deep-learning model
-    tr_y = to_categorical(tr_y)
+    tr_y = to_categorical([sample.label for sample in samples])
+
+    # Concatenate the numerical arrays
+    tr_X = feature_concatenate(samples)
 
     # Initial model
-    dnn = dense_model()
+    dnn = dense_model(shape=(tr_X.shape[1], ))
 
     # Training
     dnn.fit(tr_X, tr_y, **training_config())
@@ -61,13 +71,38 @@ def train():
     dnn.save('Model/formal/dnn.h5')
 
 
-def predict_submit():
+def training_config():
+    cfg = {'epochs': 50,
+           'batch_size': 64,
+           'validation_split': .10,
+           'validation_data': None,
+           'class_weight': None,
+           'sample_weight': None,
+           'callbacks': [early_stop(),
+                         # learning_rate_schedule(),
+                         model_keeper()
+                         ],
+           }
+
+    return cfg
+
+
+def train_VGG19():
+    vgg = VGG19()
+
+
+
+
+def predict():
     #
     stamp = datetime.datetime.now()
     stamp = stamp.strftime(format='%Y%m%d_%H%M%S')
 
     # Get test data
-    sample_id, ts_X, pred_y = pickle.load(open(os.path.join(DATA_DIR, 'test.pkl'), 'rb'))
+    samples = pickle.load(open(os.path.join(DATA_DIR, 'test.pkl'), 'rb'))
+
+    # Concatenate the numerical arrays
+    ts_X = feature_concatenate(samples)
 
     # Load model
     dnn = load_model(r'Model/formal/dnn.h5')
@@ -80,11 +115,11 @@ def predict_submit():
 
     # Create submission csv
     subm = pd.DataFrame({'Class': lbl.inverse_transform(pred_y),
-                         'ID': sample_id})
+                         'ID': [sample.id for sample in samples]})
 
     subm.to_csv(r'Output/submission_{}.csv'.format(stamp), index=False)
 
 
 if __name__ == '__main__':
     train()
-    predict_submit()
+    predict()
