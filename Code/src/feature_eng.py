@@ -143,12 +143,12 @@ def plot_melspectrogram(obj):
     fig_name = str(obj.id) + '.png'
     fig_dir = os.path.join(r'Data/Modeling/melspectograms', fig_name)
 
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(6, 3))
 
     librosa.display.specshow(mel_spec, sr=obj.sample_rate, x_axis=None, y_axis=None)
 
     plt.tight_layout()
-    plt.savefig(fig_dir, dpi=200)
+    plt.savefig(fig_dir, dpi=50)
     plt.close()
 
     return fig_dir
