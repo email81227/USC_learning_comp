@@ -9,6 +9,7 @@ from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, Mod
 from tensorflow.keras.models import load_model
 from tensorflow.keras.utils import to_categorical
 
+import cv2
 import datetime
 import os
 import pandas as pd
@@ -42,50 +43,28 @@ def feature_concatenate(objs):
     return np.array(tmp)
 
 
-# TODO:
-def img_feature_load(objs):
-    # initialize our images array (i.e., the house images themselves)
-    images = []
-
-    # loop over the indexes of the houses
-    for obj in objs:
-        # find the four images for the house and sort the file paths,
-        # ensuring the four are always in the *same order*
-        basePath = os.path.sep.join([inputPath, "{}_*".format(i + 1)])
-        housePaths = sorted(list(glob.glob(basePath)))
-
-        # initialize our list of input images along with the output image
-        # after *combining* the four input images
-        inputImages = []
-        outputImage = np.zeros((64, 64, 3), dtype="uint8")
-
-        # loop over the input house paths
-        for housePath in housePaths:
-            # load the input image, resize it to be 32 32, and then
-            # update the list of input images
-            image = cv2.imread(housePath)
-            image = cv2.resize(image, (32, 32))
-            inputImages.append(image)
-
-        # tile the four input images in the output image such the first
-        # image goes in the top-right corner, the second image in the
-        # top-left corner, the third image in the bottom-right corner,
-        # and the final image in the bottom-left corner
-        outputImage[0:32, 0:32] = inputImages[0]
-        outputImage[0:32, 32:64] = inputImages[1]
-        outputImage[32:64, 32:64] = inputImages[2]
-        outputImage[32:64, 0:32] = inputImages[3]
-
-        # add the tiled image to our set of images the network will be
-        # trained on
-        images.append(outputImage)
-
-    # return our set of images
-    return np.array(images)
+def img_loader(obj):
+    return cv2.imread(obj.ft['Mel_Spectogram'])
 
 
 def learning_rate_schedule():
     return LearningRateScheduler(lambda x: 1. / (1. + x))
+
+
+def load_imgs(objs):
+    # Initial pool
+    pool = Pool(N_JOBS)
+
+    # Map mfcc to every object
+    start = time.time()
+
+    tmp = pool.map(img_loader, objs)
+    print('Imgs loaded! in {:6.4f} sec'.format(time.time() - start))
+
+    pool.close()
+    pool.join()
+    #
+    return np.array(tmp)
 
 
 def model_keeper():
@@ -120,12 +99,23 @@ def train_cust_resnet():
     # One Hot encode label for deep-learning model
     tr_y = to_categorical([sample.label for sample in samples])
 
+    # Get image inputs
+    tr_X = load_imgs(samples)
 
+    # Initial model
+    resnet = customized_resnet(shape=tr_X.shape[1:])
+
+    # Training
+    resnet.fit(tr_X, tr_y, **training_config())
+
+    # Get best model
+    resnet = load_model(r'Model/tmp/_tmp_best.hdf5')
+    resnet.save('Model/formal/cust_resnet.h5')
 
 
 def training_config():
-    cfg = {'epochs': 50,
-           'batch_size': 64,
+    cfg = {'epochs': 30,
+           'batch_size': 256,
            'validation_split': .10,
            'validation_data': None,
            'class_weight': None,
@@ -139,7 +129,35 @@ def training_config():
     return cfg
 
 
-def predict():
+def predict_cust_resnet():
+    #
+    stamp = datetime.datetime.now()
+    stamp = stamp.strftime(format='%Y%m%d_%H%M%S')
+
+    # Get test data
+    samples = pickle.load(open(os.path.join(DATA_DIR, 'test.pkl'), 'rb'))
+
+    # Concatenate the numerical arrays
+    ts_X = load_imgs(samples)
+
+    # Load model
+    resnet = load_model(r'Model/formal/cust_resnet.h5')
+
+    # Predict
+    pred_y = resnet.predict(ts_X.astype(np.float16))
+    pred_y = np.argmax(pred_y, axis=1)
+
+    # Get label encoder
+    lbl = pickle.load(open(os.path.join(r'Encoders/label', 'label_encoder.pkl'), 'rb'))
+
+    # Create submission csv
+    subm = pd.DataFrame({'Class': lbl.inverse_transform(pred_y),
+                         'ID': [sample.id for sample in samples]})
+
+    subm.to_csv(r'Output/submission_{}.csv'.format(stamp), index=False)
+
+
+def predict_dnn():
     #
     stamp = datetime.datetime.now()
     stamp = stamp.strftime(format='%Y%m%d_%H%M%S')
@@ -167,5 +185,8 @@ def predict():
 
 
 if __name__ == '__main__':
-    train_dnn()
-    predict()
+    # train_dnn()
+    # predict_dnn()
+
+    train_cust_resnet()
+    predict_cust_resnet()
