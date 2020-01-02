@@ -1,4 +1,4 @@
-from Code.src.auto_encoders import AutoEncoder
+from Code.src.tf_autoencoders import AutoEncoder
 from Code.src.preprocess import SAMPLE_RATE, LENGTH
 from Code.src.utils import Features
 from collections import defaultdict

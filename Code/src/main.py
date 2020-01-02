@@ -2,7 +2,7 @@
 import numpy as np
 np.random.seed(123)
 
-from Code.src.models import *
+from Code.src.tf_models import *
 from Code.src.preprocess import N_JOBS
 from multiprocessing import Pool
 from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoint
