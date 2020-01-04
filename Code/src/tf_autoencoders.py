@@ -4,23 +4,25 @@ import os
 import tensorflow as tf
 import time
 
+from tensorflow import keras
+
 
 LATENT_SHAPE = 32
 
 
 # Performance different between Keras + tensorflow and tf.keras
 # >>> The optimizer Ada-delta has different default learning rate which is 1e-3 and 1.0 respectively
-class AutoEncoder(tf.keras.Model):
+class AutoEncoder(keras.Model):
     def __init__(self, latent_dim, original_size):
         super(AutoEncoder, self).__init__()
         self.latent_dim = latent_dim
 
-        self.inference_net = tf.keras.Sequential()
-        self.inference_net.add(tf.keras.layers.InputLayer(input_shape=original_size))
-        self.inference_net.add(tf.keras.layers.Dense(self.latent_dim, activation='relu'))
+        self.inference_net = keras.Sequential()
+        self.inference_net.add(keras.layers.InputLayer(input_shape=original_size))
+        self.inference_net.add(keras.layers.Dense(self.latent_dim, activation='relu'))
 
-        self.generative_net = tf.keras.Sequential()
-        self.generative_net.add(tf.keras.layers.Dense(original_size, activation='sigmoid'))
+        self.generative_net = keras.Sequential()
+        self.generative_net.add(keras.layers.Dense(original_size, activation='sigmoid'))
 
     def encode(self, samples):
         return self.inference_net(samples)
@@ -46,7 +48,7 @@ if __name__ == '__main__':
     (preprocessed data == [feature_eng.py] ==> modeling)
 
     '''
-    (tr_X, _), (ts_X, _) = tf.keras.datasets.mnist.load_data()
+    (tr_X, _), (ts_X, _) = keras.datasets.mnist.load_data()
 
     tr_X = tr_X.astype('float32') / 255.
     ts_X = ts_X.astype('float32') / 255.
@@ -60,8 +62,8 @@ if __name__ == '__main__':
     ts_X = tf.convert_to_tensor(ts_X)
     
     model = AutoEncoder(32, 784)
-    model.compile(optimizer=tf.keras.optimizers.Adadelta(1.0, .95),
-                  loss=tf.keras.losses.BinaryCrossentropy())
+    model.compile(optimizer=keras.optimizers.Adadelta(1.0, .95),
+                  loss=keras.losses.BinaryCrossentropy())
     model.fit(tr_X, tr_X,
               epochs=50,
               batch_size=256,

@@ -1,8 +1,63 @@
 from tensorflow import keras
-from tensorflow.keras.layers import Dense, Input, Conv2D, MaxPooling2D, GlobalAveragePooling2D, Dropout
+from tensorflow.keras.layers import Dense, Input, Conv2D, MaxPooling2D, GlobalAveragePooling2D, Dropout, concatenate
 from tensorflow.keras.models import Sequential
 # from tensorflow.keras.applications import VGG19
 from tensorflow.keras import Model
+
+
+class ComplexInput(keras.Model):
+    def __init__(self, input_shapes, num_class):
+        '''
+
+        :param input_shapes: A dictionary. The keys are name and the values are also dictionaries with shape and type info.
+        '''
+        super(ComplexInput, self).__init__()
+
+        self.num_class = num_class
+        self.input_seq = []
+
+        for k, v in input_shapes.items():
+            if v['type'].startswith('dense'):
+                self.input_seq.append(self.dense_inputs(v['shape'], k))
+            elif v['type'].startswith('resnet'):
+                self.input_seq.append(self.resnet_inputs(v['shape'], k))
+
+        feat_inputs = concatenate([model.output for model in self.input_seq])
+
+        x = Dense(32, activation='relu')(feat_inputs)
+        outputs = Dense(self.num_class, activation='softmax')(x)
+
+        self.model = Model(inputs=[model.input for model in self.input_seq], outputs=outputs)
+
+    def dense_inputs(self, shape, name):
+        inputs = Input(shape=shape, name=name)
+        x = Dense(1024, activation='relu')(inputs)
+        outputs = Dense(self.num_class, activation='softmax')(x)
+        return Model(inputs, outputs)
+
+    def resnet_inputs(self, shape, name):
+        inputs = Input(shape=shape, name=name)
+        x = Conv2D(32, 3, activation='relu')(inputs)
+        x = Conv2D(64, 3, activation='relu')(x)
+        block_1_output = MaxPooling2D(3)(x)
+
+        x = Conv2D(64, 3, activation='relu', padding='same')(block_1_output)
+        x = Conv2D(64, 3, activation='relu', padding='same')(x)
+        block_2_output = keras.layers.add([x, block_1_output])
+
+        x = Conv2D(64, 3, activation='relu', padding='same')(block_2_output)
+        x = Conv2D(64, 3, activation='relu', padding='same')(x)
+        block_3_output = keras.layers.add([x, block_2_output])
+
+        x = Conv2D(64, 3, activation='relu')(block_3_output)
+        x = GlobalAveragePooling2D()(x)
+        x = Dense(256, activation='relu')(x)
+        x = Dropout(0.5)(x)
+        outputs = Dense(self.num_class, activation='softmax')(x)
+        return Model(inputs, outputs)
+
+    def call(self, samples, training=None, mask=None):
+        return self.model(samples)
 
 
 def dense_model(shape=(120,)):
@@ -13,7 +68,7 @@ def dense_model(shape=(120,)):
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
 
-    print(model.summary())
+    # print(model.summary())
     return model
 
 
@@ -38,7 +93,7 @@ def customized_resnet(shape=(300, 150, 3)):
     outputs = Dense(10, activation='softmax')(x)
 
     model = Model(inputs, outputs, name='cust_resnet')
-    model.summary()
+    # model.summary()
 
     model.compile(optimizer=keras.optimizers.RMSprop(1e-3),
                   loss='categorical_crossentropy',
