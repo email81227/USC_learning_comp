@@ -24,7 +24,7 @@ class ComplexInput(keras.Model):
 
         feat_inputs = concatenate([model.output for model in self.input_seq])
 
-        x = Dense(32, activation='relu')(feat_inputs)
+        x = Dense(256, activation='relu')(feat_inputs)
         outputs = Dense(self.num_class, activation='softmax')(x)
 
         self.model = Model(inputs=[model.input for model in self.input_seq], outputs=outputs)
@@ -32,8 +32,9 @@ class ComplexInput(keras.Model):
     def dense_inputs(self, shape, name):
         inputs = Input(shape=shape, name=name)
         x = Dense(1024, activation='relu')(inputs)
-        outputs = Dense(self.num_class, activation='softmax')(x)
-        return Model(inputs, outputs)
+        x = Dropout(0.2)(x)
+        # x = Dense(self.num_class, activation='softmax')(x)
+        return Model(inputs, x)
 
     def resnet_inputs(self, shape, name):
         inputs = Input(shape=shape, name=name)
@@ -52,9 +53,9 @@ class ComplexInput(keras.Model):
         x = Conv2D(64, 3, activation='relu')(block_3_output)
         x = GlobalAveragePooling2D()(x)
         x = Dense(256, activation='relu')(x)
-        x = Dropout(0.5)(x)
-        outputs = Dense(self.num_class, activation='softmax')(x)
-        return Model(inputs, outputs)
+        x = Dropout(0.2)(x)
+        # x = Dense(self.num_class, activation='softmax')(x)
+        return Model(inputs, x)
 
     def call(self, samples, training=None, mask=None):
         return self.model(samples)

@@ -16,7 +16,7 @@ import tensorflow as tf
 import time
 
 
-LATENT_DIM = 32
+LATENT_DIM = 64
 MAX_LEN = SAMPLE_RATE * LENGTH
 N_JOBS = 15
 
@@ -90,7 +90,7 @@ def feature_extraction_by_autoencoder(objs, training):
 
 
 def get_mfcc(obj):
-    mfcc = librosa.feature.mfcc(obj.sample, obj.sample_rate, n_mfcc=20)
+    mfcc = librosa.feature.mfcc(obj.sample, obj.sample_rate, n_mfcc=256)
     dmfcc = mfcc[:, 1:] - mfcc[:, :-1]
     ddmfcc = dmfcc[:, 1:] - dmfcc[:, :-1]
     return np.concatenate((np.mean(mfcc, axis=1), np.std(mfcc, axis=1),
