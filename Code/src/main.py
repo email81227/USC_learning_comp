@@ -9,6 +9,7 @@ from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, Mod
 from tensorflow.keras.models import load_model
 from tensorflow.keras.utils import to_categorical
 
+import collections
 import cv2
 import datetime
 import os
@@ -19,7 +20,7 @@ import time
 DATA_DIR = r'Data/Modeling'
 
 
-def concatenate(obj):
+def feature_combine(obj):
     return np.concatenate((np.array(obj.ft['AE']), obj.ft['MFCC']), axis=0)
 
 
@@ -34,7 +35,7 @@ def feature_concatenate(objs):
     # Map mfcc to every object
     start = time.time()
 
-    tmp = pool.map(concatenate, objs)
+    tmp = pool.map(feature_combine, objs)
     print('Concatenate is done! in {:6.4f} sec'.format(time.time() - start))
 
     pool.close()
@@ -81,15 +82,54 @@ def train_dnn():
     # Concatenate the numerical arrays
     tr_X = feature_concatenate(samples)
 
+    # Get class weights
+    cw = train_class_weight(samples)
+
     # Initial model
     dnn = dense_model(shape=(tr_X.shape[1], ))
 
     # Training
-    dnn.fit(tr_X, tr_y, **training_config())
+    dnn.fit(tr_X, tr_y, **training_config(cw))
 
     # Get best model
     dnn = load_model(r'Model/tmp/_tmp_best.hdf5')
     dnn.save('Model/formal/dnn.h5')
+
+
+def train_multiple_inputs_model():
+    # Get data
+    samples = pickle.load(open(os.path.join(DATA_DIR, 'train.pkl'), 'rb'))
+
+    # One Hot encode label for deep-learning model
+    tr_y = to_categorical([sample.label for sample in samples])
+
+    # Prepare inputs
+    input_enco = np.array([sample.ft['AE'] for sample in samples])
+    input_mfcc = np.array([sample.ft['MFCC'] for sample in samples])
+    input_imgs = load_imgs(samples)
+
+    # Get class weights
+    cw = train_class_weight(samples)
+
+    # Info for model creating
+    inputs = {'AE'  : {'type': 'dense', 'shape': (input_enco.shape[1],)},
+              'MFCC': {'type': 'dense', 'shape': (input_mfcc.shape[1],)},
+              'Spec': {'type': 'resnet', 'shape': (100, 200, 3)}}
+
+    # Init model
+    model = ComplexInput(inputs, 10)
+    model.model.compile(optimizer=keras.optimizers.RMSprop(1e-3),
+                        loss='categorical_crossentropy',
+                        metrics=['acc'])
+
+    # Training
+    model.model.fit([input_enco,
+                     input_mfcc,
+                     input_imgs], tr_y, **training_config(cw))
+
+    # Get best model
+    resnet = load_model(r'Model/tmp/_tmp_best.hdf5')
+    resnet.save('Model/formal/multiple_inputs.h5')
 
 
 def train_cust_resnet():
@@ -102,23 +142,37 @@ def train_cust_resnet():
     # Get image inputs
     tr_X = load_imgs(samples)
 
+    # Get class weights
+    cw = train_class_weight(samples)
+
     # Initial model
     resnet = customized_resnet(shape=tr_X.shape[1:])
 
     # Training
-    resnet.fit(tr_X, tr_y, **training_config())
+    resnet.fit(tr_X, tr_y, **training_config(cw))
 
     # Get best model
     resnet = load_model(r'Model/tmp/_tmp_best.hdf5')
     resnet.save('Model/formal/cust_resnet.h5')
 
 
-def training_config():
-    cfg = {'epochs': 30,
-           'batch_size': 256,
+def train_class_weight(samples):
+    # Dictionary of class and number of them
+    weights = collections.Counter([sample.label for sample in samples])
+    tot_wgt = sum(weights.values())
+
+    weights = {k: tot_wgt/v for k, v in weights.items()}
+    max_wgt = max(weights.values())
+
+    return {k: v/max_wgt for k, v in weights.items()}
+
+
+def training_config(class_weight=None):
+    cfg = {'epochs': 50,
+           'batch_size': 128,
            'validation_split': .10,
            'validation_data': None,
-           'class_weight': None,
+           'class_weight': class_weight,
            'sample_weight': None,
            'callbacks': [early_stop(),
                          # learning_rate_schedule(),
@@ -173,6 +227,36 @@ def predict_dnn():
 
     # Predict
     pred_y = dnn.predict_classes(ts_X)
+
+    # Get label encoder
+    lbl = pickle.load(open(os.path.join(r'Encoders/label', 'label_encoder.pkl'), 'rb'))
+
+    # Create submission csv
+    subm = pd.DataFrame({'Class': lbl.inverse_transform(pred_y),
+                         'ID': [sample.id for sample in samples]})
+
+    subm.to_csv(r'Output/submission_{}.csv'.format(stamp), index=False)
+
+
+def predict_multiple_inputs_model():
+    #
+    stamp = datetime.datetime.now()
+    stamp = stamp.strftime(format='%Y%m%d_%H%M%S')
+
+    # Get test data
+    samples = pickle.load(open(os.path.join(DATA_DIR, 'test.pkl'), 'rb'))
+
+    # Concatenate the numerical arrays
+    input_enco = np.array([sample.ft['AE'] for sample in samples])
+    input_mfcc = np.array([sample.ft['MFCC'] for sample in samples])
+    input_imgs = load_imgs(samples)
+
+    # Load model
+    resnet = load_model(r'Model/formal/multiple_inputs.h5')
+
+    # Predict
+    pred_y = resnet.predict([input_enco.astype(np.float16), input_mfcc.astype(np.float16), input_imgs.astype(np.float16)])
+    pred_y = np.argmax(pred_y, axis=1)
 
     # Get label encoder
     lbl = pickle.load(open(os.path.join(r'Encoders/label', 'label_encoder.pkl'), 'rb'))
