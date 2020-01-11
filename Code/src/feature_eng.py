@@ -1,5 +1,5 @@
+from Code.src.config import *
 from Code.src.tf_autoencoders import AutoEncoder
-from Code.src.preprocess import SAMPLE_RATE, LENGTH
 from Code.src.utils import Features
 from collections import defaultdict
 from matplotlib import pyplot as plt
@@ -11,14 +11,6 @@ import os
 import pickle
 import librosa
 import librosa.display
-import numpy as np
-import tensorflow as tf
-import time
-
-
-LATENT_DIM = 64
-MAX_LEN = SAMPLE_RATE * LENGTH
-N_JOBS = 15
 
 
 # for mfcc

@@ -1,14 +1,7 @@
+from Code.src.config import *
 from multiprocessing import Pool
 
 import librosa
-import numpy as np
-import time
-
-
-SAMPLE_RATE = 22500
-LENGTH = 4
-MAX_LEN = SAMPLE_RATE * LENGTH
-N_JOBS = 15
 
 
 def padding(obj, max_len=MAX_LEN):

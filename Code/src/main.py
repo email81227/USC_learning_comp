@@ -1,5 +1,5 @@
 # For reproducible results
-import numpy as np
+from Code.src.config import *
 np.random.seed(123)
 
 from Code.src.tf_models import *
@@ -14,8 +14,6 @@ import cv2
 import datetime
 import os
 import pandas as pd
-import pickle
-import time
 
 DATA_DIR = r'Data/Modeling'
 
@@ -44,8 +42,12 @@ def feature_concatenate(objs):
     return np.array(tmp)
 
 
-def img_loader(obj):
+def mel_spec_img_loader(obj):
     return cv2.imread(obj.ft['Mel_Spectogram'])
+
+
+def wave_img_loader(obj):
+    return cv2.imread(obj.ft['Wave_Plot'])
 
 
 def learning_rate_schedule():
@@ -59,13 +61,16 @@ def load_imgs(objs):
     # Map mfcc to every object
     start = time.time()
 
-    tmp = pool.map(img_loader, objs)
+    tmp1 = pool.map(mel_spec_img_loader, objs)
+    print('Imgs loaded! in {:6.4f} sec'.format(time.time() - start))
+
+    tmp2 = pool.map(wave_img_loader, objs)
     print('Imgs loaded! in {:6.4f} sec'.format(time.time() - start))
 
     pool.close()
     pool.join()
     #
-    return np.array(tmp)
+    return np.array(tmp1), np.array(tmp2)
 
 
 def model_keeper():
@@ -106,7 +111,7 @@ def train_multiple_inputs_model():
     # Prepare inputs
     input_enco = np.array([sample.ft['AE'] for sample in samples])
     input_mfcc = np.array([sample.ft['MFCC'] for sample in samples])
-    input_imgs = load_imgs(samples)
+    mel_spec_imgs, wavec_imgs = load_imgs(samples)
 
     # Get class weights
     cw = train_class_weight(samples)
@@ -114,7 +119,8 @@ def train_multiple_inputs_model():
     # Info for model creating
     inputs = {'AE'  : {'type': 'dense', 'shape': (input_enco.shape[1],)},
               'MFCC': {'type': 'dense', 'shape': (input_mfcc.shape[1],)},
-              'Spec': {'type': 'resnet', 'shape': (100, 200, 3)}}
+              'Spec': {'type': 'resnet', 'shape': (100, 200, 3)},
+              'Wave': {'type': 'resnet', 'shape': (100, 200, 3)}}
 
     # Init model
     model = ComplexInput(inputs, 10)
@@ -125,7 +131,8 @@ def train_multiple_inputs_model():
     # Training
     model.model.fit([input_enco,
                      input_mfcc,
-                     input_imgs], tr_y, **training_config(cw))
+                     mel_spec_imgs,
+                     wavec_imgs], tr_y, **training_config(cw))
 
     # Get best model
     resnet = load_model(r'Model/tmp/_tmp_best.hdf5')
@@ -169,7 +176,7 @@ def train_class_weight(samples):
 
 def training_config(class_weight=None):
     cfg = {'epochs': 50,
-           'batch_size': 128,
+           'batch_size': 32,
            'validation_split': .10,
            'validation_data': None,
            'class_weight': class_weight,
@@ -249,13 +256,16 @@ def predict_multiple_inputs_model():
     # Concatenate the numerical arrays
     input_enco = np.array([sample.ft['AE'] for sample in samples])
     input_mfcc = np.array([sample.ft['MFCC'] for sample in samples])
-    input_imgs = load_imgs(samples)
+    mel_spec_imgs, wavec_imgs = load_imgs(samples)
 
     # Load model
     resnet = load_model(r'Model/formal/multiple_inputs.h5')
 
     # Predict
-    pred_y = resnet.predict([input_enco.astype(np.float16), input_mfcc.astype(np.float16), input_imgs.astype(np.float16)])
+    pred_y = resnet.predict([input_enco.astype(np.float16),
+                             input_mfcc.astype(np.float16),
+                             mel_spec_imgs.astype(np.float16),
+                             wavec_imgs.astype(np.float16)])
     pred_y = np.argmax(pred_y, axis=1)
 
     # Get label encoder
@@ -272,5 +282,5 @@ if __name__ == '__main__':
     # train_dnn()
     # predict_dnn()
 
-    train_cust_resnet()
-    predict_cust_resnet()
+    train_multiple_inputs_model()
+    predict_multiple_inputs_model()

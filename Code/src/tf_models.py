@@ -24,7 +24,7 @@ class ComplexInput(keras.Model):
 
         feat_inputs = concatenate([model.output for model in self.input_seq])
 
-        x = Dense(256, activation='relu')(feat_inputs)
+        x = Dense(128, activation='relu')(feat_inputs)
         outputs = Dense(self.num_class, activation='softmax')(x)
 
         self.model = Model(inputs=[model.input for model in self.input_seq], outputs=outputs)
@@ -52,7 +52,7 @@ class ComplexInput(keras.Model):
 
         x = Conv2D(64, 3, activation='relu')(block_3_output)
         x = GlobalAveragePooling2D()(x)
-        x = Dense(256, activation='relu')(x)
+        x = Dense(128, activation='relu')(x)
         x = Dropout(0.2)(x)
         # x = Dense(self.num_class, activation='softmax')(x)
         return Model(inputs, x)
