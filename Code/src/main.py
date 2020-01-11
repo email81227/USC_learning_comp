@@ -5,7 +5,7 @@ np.random.seed(123)
 from Code.src.tf_models import *
 from Code.src.preprocess import N_JOBS
 from multiprocessing import Pool
-from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoint
+from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoint, ReduceLROnPlateau
 from tensorflow.keras.models import load_model
 from tensorflow.keras.utils import to_categorical
 
@@ -23,7 +23,7 @@ def feature_combine(obj):
 
 
 def early_stop():
-    return EarlyStopping(monitor='val_loss', patience=5, verbose=1)
+    return EarlyStopping(monitor='val_loss', patience=20, verbose=1)
 
 
 def feature_concatenate(objs):
@@ -175,6 +175,8 @@ def train_class_weight(samples):
 
 
 def training_config(class_weight=None):
+    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=5, min_lr=1e-8)
+
     cfg = {'epochs': 50,
            'batch_size': 32,
            'validation_split': .10,
@@ -182,7 +184,7 @@ def training_config(class_weight=None):
            'class_weight': class_weight,
            'sample_weight': None,
            'callbacks': [early_stop(),
-                         # learning_rate_schedule(),
+                         reduce_lr,
                          model_keeper()
                          ],
            }
