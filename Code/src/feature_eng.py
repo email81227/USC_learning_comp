@@ -124,14 +124,18 @@ def distributed_extraction(objs):
     mel_spec_feats = pool.map(plot_melspectrogram, objs)
     print('MelSpectogram ploting is done! in {:6.4f} sec'.format(time.time() - start))
 
+    wav_plot_feats = pool.map(plot_wave, objs)
+    print('Wave ploting is done! in {:6.4f} sec'.format(time.time() - start))
+
     pool.close()
     pool.join()
     #
     feats = defaultdict(dict)
 
-    for mfcc, mel_spec, obj in zip(mfcc_feats, mel_spec_feats, objs):
+    for mfcc, mel_spec, wav_plot, obj in zip(mfcc_feats, mel_spec_feats, wav_plot_feats, objs):
         feats[obj.id].update({'MFCC': mfcc,
-                              'Mel_Spectogram': mel_spec})
+                              'Mel_Spectogram': mel_spec,
+                              'Wave_Plot': wav_plot})
 
     return feats
 
@@ -154,6 +158,21 @@ def plot_melspectrogram(obj):
     return fig_dir
 
 
+def plot_wave(obj):
+    fig_name = str(obj.id) + '.png'
+    fig_dir = os.path.join(r'Data/Modeling/waveplot', fig_name)
+
+    plt.figure(figsize=(4, 2))
+
+    librosa.display.waveplot(obj.sample, sr=obj.sample_rate, max_points=None)
+    plt.axis('off')
+    plt.tight_layout()
+    plt.savefig(fig_dir, dpi=50)
+    plt.close()
+
+    return fig_dir
+
+
 if __name__ == '__main__':
     '''
     Sorting out the preprocessed data into modeling folder
@@ -164,10 +183,12 @@ if __name__ == '__main__':
     SAVE_DIR = r'Data/Modeling'
 
     tr = pickle.load(open(r'Data/preprocessed/train.pkl', 'rb'))
-    ts = pickle.load(open(r'Data/preprocessed/test.pkl', 'rb'))
-
     tr = features_engineering(tr, True)
-    ts = features_engineering(ts, False)
 
     pickle.dump(tr, open(os.path.join(SAVE_DIR, 'train.pkl'), 'wb'))
+
+
+    ts = pickle.load(open(r'Data/preprocessed/test.pkl', 'rb'))
+    ts = features_engineering(ts, False)
+
     pickle.dump(ts, open(os.path.join(SAVE_DIR, 'test.pkl'), 'wb'))
