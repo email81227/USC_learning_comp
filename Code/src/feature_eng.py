@@ -139,7 +139,7 @@ def plot_melspectrogram(obj):
     fig_name = str(obj.id) + '.png'
     fig_dir = os.path.join(r'Data/Modeling/melspectograms', fig_name)
 
-    plt.figure(figsize=(4, 2))
+    plt.figure(figsize=(6, 3))
 
     librosa.display.specshow(mel_spec, sr=obj.sample_rate, x_axis=None, y_axis=None)
 
@@ -154,18 +154,19 @@ def plot_wave(obj):
     fig_name = str(obj.id) + '.png'
     fig_dir = os.path.join(r'Data/Modeling/waveplot', fig_name)
 
-    plt.figure(figsize=(4, 2))
+    plt.figure(figsize=(6, 3))
 
     librosa.display.waveplot(obj.sample, sr=obj.sample_rate, max_points=None)
     plt.axis('off')
     plt.tight_layout()
-    plt.savefig(fig_dir, dpi=50)
+    plt.savefig(fig_dir, dpi=0)
     plt.close()
 
     return fig_dir
 
 
 if __name__ == '__main__':
+    import gc
     '''
     Sorting out the preprocessed data into modeling folder
 
@@ -179,8 +180,11 @@ if __name__ == '__main__':
 
     pickle.dump(tr, open(os.path.join(SAVE_DIR, 'train.pkl'), 'wb'))
 
+    gc.collect()
 
     ts = pickle.load(open(r'Data/preprocessed/test.pkl', 'rb'))
     ts = features_engineering(ts, False)
 
     pickle.dump(ts, open(os.path.join(SAVE_DIR, 'test.pkl'), 'wb'))
+
+    gc.collect()
