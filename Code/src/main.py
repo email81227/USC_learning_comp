@@ -119,8 +119,8 @@ def train_multiple_inputs_model():
     # Info for model creating
     inputs = {'AE'  : {'type': 'dense', 'shape': (input_enco.shape[1],)},
               'MFCC': {'type': 'dense', 'shape': (input_mfcc.shape[1],)},
-              'Spec': {'type': 'resnet', 'shape': (100, 200, 3)},
-              'Wave': {'type': 'resnet', 'shape': (100, 200, 3)}}
+              'Spec': {'type': 'resnet', 'shape': (150, 300, 3)},
+              'Wave': {'type': 'resnet', 'shape': (150, 300, 3)}}
 
     # Init model
     model = ComplexInput(inputs, 10)

@@ -159,7 +159,7 @@ def plot_wave(obj):
     librosa.display.waveplot(obj.sample, sr=obj.sample_rate, max_points=None)
     plt.axis('off')
     plt.tight_layout()
-    plt.savefig(fig_dir, dpi=0)
+    plt.savefig(fig_dir, dpi=50)
     plt.close()
 
     return fig_dir
