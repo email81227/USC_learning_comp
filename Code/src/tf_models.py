@@ -1,7 +1,8 @@
 from tensorflow import keras
-from tensorflow.keras.layers import Dense, Input, Conv2D, MaxPooling2D, GlobalAveragePooling2D, Dropout, concatenate
+from tensorflow.keras.layers import Dense, Input, Dropout, concatenate
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, GlobalAveragePooling2D
+from tensorflow.keras.layers import Conv1D, MaxPooling1D
 from tensorflow.keras.models import Sequential
-# from tensorflow.keras.applications import VGG19
 from tensorflow.keras import Model
 
 
@@ -57,8 +58,23 @@ class ComplexInput(keras.Model):
         # x = Dense(self.num_class, activation='softmax')(x)
         return Model(inputs, x)
 
+    # Parameters for input size = 50,999
     def proposed_cnn(self, shape, name):
-        return
+        inputs = Input(shape=shape, name=name)
+        x = Conv1D(16, 64, 2, activation='relu')(inputs)
+        block_1_output = MaxPooling1D(8, 8)(x)
+
+        x = Conv1D(32, 32, 2, activation='relu')(block_1_output)
+        block_2_output = MaxPooling1D(8, 8)(x)
+
+        x = Conv1D(64, 16, 2, activation='relu')(block_2_output)
+        x = Conv1D(128, 8, 2, activation='relu')(x)
+        x = Conv1D(256, 4, 2, activation='relu')(x)
+        block_3_output = MaxPooling1D(4, 4)(x)
+
+        x = Dense(128, activation='relu')(block_3_output)
+        x = Dense(64, activation='relu')(x)
+        return Model(inputs, x)
 
     def call(self, samples, training=None, mask=None):
         return self.model(samples)
