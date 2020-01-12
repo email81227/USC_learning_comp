@@ -57,6 +57,9 @@ class ComplexInput(keras.Model):
         # x = Dense(self.num_class, activation='softmax')(x)
         return Model(inputs, x)
 
+    def proposed_cnn(self, shape, name):
+        return
+
     def call(self, samples, training=None, mask=None):
         return self.model(samples)
 
