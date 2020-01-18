@@ -23,11 +23,11 @@ def features_engineering(objs, training=True):
         # List of feature objects
         features = []
         for obj, y in zip(objs, ys):
-            features.append(Features(obj.id, {}, y))
+            features.append(Features(obj.id, {'Original_Sample': obj.sample}, y))
     else:
         features = []
         for obj in objs:
-            features.append(Features(obj.id, {}, None))
+            features.append(Features(obj.id, {'Original_Sample': obj.sample}, None))
 
     # Feature extracted by multiprocess
     feats = distributed_extraction(objs)
@@ -36,9 +36,9 @@ def features_engineering(objs, training=True):
     ae_feats = feature_extraction_by_autoencoder(objs, training=training)
 
     # Feature merge
-    for ae_feat, obj in zip(ae_feats, features):
-        obj.ft['AE'] = ae_feat
-        obj.ft.update(feats[obj.id])
+    for ae_feat, feat in zip(ae_feats, features):
+        feat.ft['AE'] = ae_feat
+        feat.ft.update(feats[feat.id])
 
     return features
 
