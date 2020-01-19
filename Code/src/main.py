@@ -77,6 +77,26 @@ def model_keeper():
     return ModelCheckpoint('Model/tmp/_tmp_best.hdf5', save_best_only=True, monitor='val_loss', mode='min')
 
 
+def n2n_cnn_aggregator(y):
+    return np.mean(y, axis=0)
+
+
+def rolling_frames_split(objs, frame_length=1.0, sr=22500, overlapping=.5, max_len=90000):
+    num_sample = int(frame_length * sr)
+    start_post = [i for i in range(0, max_len - sr, int(num_sample * overlapping)) ]
+
+    id = []
+    X = []
+    y = []
+    for obj in objs:
+        for st in start_post:
+            id.append(obj.id)
+            X.append(obj.ft['Original_Sample'][st:(st + sr)])
+            y.append(obj.label)
+
+    return id, X, y
+
+
 def train_dnn():
     # Get data
     samples = pickle.load(open(os.path.join(DATA_DIR, 'train.pkl'), 'rb'))
@@ -163,6 +183,39 @@ def train_cust_resnet():
     resnet.save('Model/formal/cust_resnet.h5')
 
 
+def train_n2n_cnn():
+    SR = 22500
+
+    # Get data
+    samples = pickle.load(open(os.path.join(DATA_DIR, 'train.pkl'), 'rb'))
+
+    # Get image inputs
+    _, tr_X, tr_y = rolling_frames_split(samples, frame_length=1, sr=SR)
+    tr_X = np.array(tr_X)
+    tr_X = np.expand_dims(tr_X, axis=2)
+
+    # One Hot encode label for deep-learning model
+    tr_y = to_categorical(tr_y)
+
+    # Get class weights
+    cw = train_class_weight(samples)
+
+    del samples
+
+    # Initial model
+    model = End2End_CNN((SR, 1))
+    model.model.compile(optimizer=keras.optimizers.RMSprop(1e-3),
+                        loss='categorical_crossentropy',
+                        metrics=['acc'])
+
+    # Training
+    model.model.fit(tr_X, tr_y, **training_config(cw))
+
+    # Get best model
+    resnet = load_model(r'Model/tmp/_tmp_best.hdf5')
+    resnet.save('Model/formal/n2n.h5')
+
+
 def train_class_weight(samples):
     # Dictionary of class and number of them
     weights = collections.Counter([sample.label for sample in samples])
@@ -236,6 +289,45 @@ def predict_dnn():
 
     # Predict
     pred_y = dnn.predict_classes(ts_X)
+
+    # Get label encoder
+    lbl = pickle.load(open(os.path.join(r'Encoders/label', 'label_encoder.pkl'), 'rb'))
+
+    # Create submission csv
+    subm = pd.DataFrame({'Class': lbl.inverse_transform(pred_y),
+                         'ID': [sample.id for sample in samples]})
+
+    subm.to_csv(r'Output/submission_{}.csv'.format(stamp), index=False)
+
+
+def predict_n2n_cnn():
+    SR = 22500
+
+    #
+    stamp = datetime.datetime.now()
+    stamp = stamp.strftime(format='%Y%m%d_%H%M%S')
+
+    # Get test data
+    samples = pickle.load(open(os.path.join(DATA_DIR, 'test.pkl'), 'rb'))
+
+    # Concatenate the numerical arrays
+    uids, X, _ = rolling_frames_split(samples, frame_length=1, sr=SR)
+    ts_X = collections.defaultdict(list)
+    for uid, x in zip(uids, X):
+        ts_X[uid].append(x)
+
+        # Load model
+    model = load_model(r'Model/formal/n2n.h5')
+
+    # Predict
+    pred_y = []
+    for k, v in ts_X.items():
+        tmp = np.array(v)
+        tmp = np.expand_dims(tmp, axis=2)
+        tmp = model.predict(tmp.astype(np.float16))
+        tmp = n2n_cnn_aggregator(tmp)
+
+        pred_y.append(np.argmax(tmp, axis=0))
 
     # Get label encoder
     lbl = pickle.load(open(os.path.join(r'Encoders/label', 'label_encoder.pkl'), 'rb'))

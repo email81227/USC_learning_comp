@@ -1,7 +1,7 @@
 from tensorflow import keras
 from tensorflow.keras.layers import Dense, Input, Dropout, concatenate
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, GlobalAveragePooling2D
-from tensorflow.keras.layers import Conv1D, MaxPooling1D
+from tensorflow.keras.layers import Conv1D, MaxPooling1D, Flatten
 from tensorflow.keras.models import Sequential
 from tensorflow.keras import Model
 
@@ -59,7 +59,7 @@ class ComplexInput(keras.Model):
         return Model(inputs, x)
 
     # Parameters for input size = 50,999
-    def proposed_cnn(self, shape, name):
+    def n2n_cnn(self, shape, name):
         inputs = Input(shape=shape, name=name)
         x = Conv1D(16, 64, 2, activation='relu')(inputs)
         block_1_output = MaxPooling1D(8, 8)(x)
@@ -75,6 +75,42 @@ class ComplexInput(keras.Model):
         x = Dense(128, activation='relu')(block_3_output)
         x = Dense(64, activation='relu')(x)
         return Model(inputs, x)
+
+    def call(self, samples, training=None, mask=None):
+        return self.model(samples)
+
+
+class End2End_CNN(keras.Model):
+    def __init__(self, input_shapes=22500, num_class=10):
+        '''
+
+        :param input_shapes: A dictionary. The keys are name and the values are also dictionaries with shape and type info.
+        '''
+        super(End2End_CNN, self).__init__()
+        self.model = self.n2n_cnn(input_shapes, 'n2n', num_class)
+
+    def n2n_cnn(self, shape, name, num_class):
+        inputs = Input(shape=shape, name=name)
+        x = Conv1D(16, 64, 2, activation='relu')(inputs)
+        block_1_output = MaxPooling1D(8, 8)(x)
+
+        x = Conv1D(32, 32, 2, activation='relu')(block_1_output)
+        block_2_output = MaxPooling1D(8, 8)(x)
+
+        if shape[0] > 16000:
+            x = Conv1D(64, 16, 2, activation='relu')(block_2_output)
+            x = Conv1D(128, 8, 2, activation='relu')(x)
+            x = Conv1D(256, 4, 2, activation='relu')(x)
+            block_3_output = MaxPooling1D(4, 4)(x)
+
+            x = Dense(128, activation='relu')(block_3_output)
+        else:
+            x = Dense(128, activation='relu')(block_2_output)
+
+        x = Flatten()(x)
+        x = Dense(64, activation='relu')(x)
+        outpits = Dense(num_class, activation='softmax')(x)
+        return Model(inputs, outpits)
 
     def call(self, samples, training=None, mask=None):
         return self.model(samples)
