@@ -8,6 +8,7 @@ from multiprocessing import Pool
 from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoint, ReduceLROnPlateau
 from tensorflow.keras.models import load_model
 from tensorflow.keras.utils import to_categorical
+from tqdm import tqdm
 
 import collections
 import cv2
@@ -184,6 +185,13 @@ def train_cust_resnet():
 
 
 def train_n2n_cnn():
+    '''
+    TODO:
+    1. How agg works in training
+    2. Gammatone Filterbanks
+
+    :return:
+    '''
     SR = 22500
 
     # Get data
@@ -311,7 +319,7 @@ def predict_n2n_cnn():
     samples = pickle.load(open(os.path.join(DATA_DIR, 'test.pkl'), 'rb'))
 
     # Concatenate the numerical arrays
-    uids, X, _ = rolling_frames_split(samples, frame_length=1, sr=SR)
+    uids, X, _ = rolling_frames_split(samples, frame_length=1, sr=SR, overlapping=.75)
     ts_X = collections.defaultdict(list)
     for uid, x in zip(uids, X):
         ts_X[uid].append(x)
@@ -321,6 +329,7 @@ def predict_n2n_cnn():
 
     # Predict
     pred_y = []
+    pbar = tqdm(total=len(samples))
     for k, v in ts_X.items():
         tmp = np.array(v)
         tmp = np.expand_dims(tmp, axis=2)
@@ -328,6 +337,9 @@ def predict_n2n_cnn():
         tmp = n2n_cnn_aggregator(tmp)
 
         pred_y.append(np.argmax(tmp, axis=0))
+        pbar.update(1)
+
+    pbar.close()
 
     # Get label encoder
     lbl = pickle.load(open(os.path.join(r'Encoders/label', 'label_encoder.pkl'), 'rb'))
