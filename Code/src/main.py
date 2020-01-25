@@ -198,7 +198,7 @@ def train_n2n_cnn():
     samples = pickle.load(open(os.path.join(DATA_DIR, 'train.pkl'), 'rb'))
 
     # Get image inputs
-    _, tr_X, tr_y = rolling_frames_split(samples, frame_length=1, sr=SR)
+    _, tr_X, tr_y = rolling_frames_split(samples, frame_length=1, sr=SR, overlapping=.75)
     tr_X = np.array(tr_X)
     tr_X = np.expand_dims(tr_X, axis=2)
 

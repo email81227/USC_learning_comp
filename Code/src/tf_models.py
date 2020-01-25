@@ -91,25 +91,23 @@ class End2End_CNN(keras.Model):
 
     def n2n_cnn(self, shape, name, num_class):
         inputs = Input(shape=shape, name=name)
-        x = Conv1D(16, 64, 2, activation='relu')(inputs)
-        block_1_output = MaxPooling1D(8, 8)(x)
+        x = Conv1D(16, 64, 2, activation='relu', name='CL1')(inputs)
+        block_1_output = MaxPooling1D(8, 8, name='PL1')(x)
 
-        x = Conv1D(32, 32, 2, activation='relu')(block_1_output)
-        block_2_output = MaxPooling1D(8, 8)(x)
+        x = Conv1D(32, 32, 2, activation='relu', name='CL2')(block_1_output)
+        block_2_output = MaxPooling1D(8, 8, name='PL2')(x)
+
+        x = Conv1D(64, 16, 2, activation='relu', name='CL3')(block_2_output)
 
         if shape[0] > 16000:
-            x = Conv1D(64, 16, 2, activation='relu')(block_2_output)
-            x = Conv1D(128, 8, 2, activation='relu')(x)
-            x = Conv1D(256, 4, 2, activation='relu')(x)
-            block_3_output = MaxPooling1D(4, 4)(x)
-
-            x = Dense(128, activation='relu')(block_3_output)
-        else:
-            x = Dense(128, activation='relu')(block_2_output)
+            x = Conv1D(128, 8, 2, activation='relu', name='CL4')(x)
+            x = Conv1D(256, 4, 2, activation='relu', name='CL5')(x)
+            x = MaxPooling1D(4, 4, name='PL3')(x)
 
         x = Flatten()(x)
-        x = Dense(64, activation='relu')(x)
-        outpits = Dense(num_class, activation='softmax')(x)
+        x = Dense(128, activation='relu', name='FC1')(x)
+        x = Dense(64, activation='relu', name='FC2')(x)
+        outpits = Dense(num_class, activation='softmax', name='OutPut')(x)
         return Model(inputs, outpits)
 
     def call(self, samples, training=None, mask=None):
