@@ -212,9 +212,11 @@ def train_n2n_cnn():
 
     # Initial model
     model = End2End_CNN((SR, 1))
-    model.model.compile(optimizer=keras.optimizers.RMSprop(1e-3),
-                        loss='categorical_crossentropy',
+    model.model.compile(optimizer=keras.optimizers.Adadelta(1.0),
+                        loss = keras.losses.MSLE,
                         metrics=['acc'])
+
+    model.model.summary()
 
     # Training
     model.model.fit(tr_X, tr_y, **training_config(cw))

@@ -1,7 +1,7 @@
 from tensorflow import keras
 from tensorflow.keras.layers import Dense, Input, Dropout, concatenate
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, GlobalAveragePooling2D
-from tensorflow.keras.layers import Conv1D, MaxPooling1D, Flatten
+from tensorflow.keras.layers import Conv1D, MaxPooling1D, Flatten, BatchNormalization
 from tensorflow.keras.models import Sequential
 from tensorflow.keras import Model
 
@@ -92,21 +92,30 @@ class End2End_CNN(keras.Model):
     def n2n_cnn(self, shape, name, num_class):
         inputs = Input(shape=shape, name=name)
         x = Conv1D(16, 64, 2, activation='relu', name='CL1')(inputs)
+        x = BatchNormalization()(x)
         block_1_output = MaxPooling1D(8, 8, name='PL1')(x)
 
         x = Conv1D(32, 32, 2, activation='relu', name='CL2')(block_1_output)
+        x = BatchNormalization()(x)
         block_2_output = MaxPooling1D(8, 8, name='PL2')(x)
 
         x = Conv1D(64, 16, 2, activation='relu', name='CL3')(block_2_output)
 
         if shape[0] > 16000:
             x = Conv1D(128, 8, 2, activation='relu', name='CL4')(x)
+            x = BatchNormalization()(x)
             x = Conv1D(256, 4, 2, activation='relu', name='CL5')(x)
+            x = BatchNormalization()(x)
             x = MaxPooling1D(4, 4, name='PL3')(x)
 
         x = Flatten()(x)
+
         x = Dense(128, activation='relu', name='FC1')(x)
+        x = Dropout(.25)(x)
+
         x = Dense(64, activation='relu', name='FC2')(x)
+        x = Dropout(.25)(x)
+
         outpits = Dense(num_class, activation='softmax', name='OutPut')(x)
         return Model(inputs, outpits)
 
